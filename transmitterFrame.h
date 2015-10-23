@@ -18,13 +18,15 @@ public:
         // do nothing;
     }
 
-    TransmitterFrame(int frameNumber) {
+    TransmitterFrame(char frameNumber) {
         this->length = 0;
+        this->data = new char[length + 1];
         this->frameNumber = frameNumber;
         this->error = false;
     }
 
     TransmitterFrame(char * frame) {
+        this->data = new char[length + 1];
         this->error = false;
         ////SETTING FRAME NUMBER
         this->setFrameNumber(frame[1]);
@@ -64,13 +66,35 @@ public:
         }
     }
 
-    char getFrameNumber() const { return this->frameNumber; }
+    TransmitterFrame(const TransmitterFrame& frame) {
+        frameNumber = frame.frameNumber;
+        length = frame.length;
+        data = new char[length + 1];
+        for (int i = 0; i < length; i++) {
+            data[i] = frame.data[i];
+        }
+        error = false;
+    }
+
+    TransmitterFrame& operator=(const TransmitterFrame& frame) {
+        frameNumber = frame.frameNumber;
+        length = frame.length;
+        //delete [] data;
+        data = new char[length + 1];
+        for (int i = 0; i < length; i++) {
+            data[i] = frame.data[i];
+        }
+        error = false;
+    }
+
+    
+
+    int getFrameNumber() const { return int(this->frameNumber); }
     void setFrameNumber(char newNumber) { this->frameNumber = newNumber; }
 
     char * getData() { return this->data; }
 
     void setData(char * newData, int length) {
-        this->data = new char[length + 1];
         for (int i = 0; i < length; ++i) {
             this->data[i] = newData[i];
         }
@@ -88,7 +112,12 @@ public:
         o[2] = STX;
         sprintf(o, "%s%s", o, this->data);
         sprintf(o, "%s%c", o, ETX);
-        sprintf(o, "%s%x", o, calc_crc16(o));
+
+        unsigned short c = calc_crc16(o, strlen(o));
+        char * a = new char[2];
+        a[0] = c & 0xff;
+        a[1] = (c >> 8) & 0xff;
+        sprintf(o, "%s%s", o, a);
         return o;
     }
 
@@ -97,7 +126,7 @@ public:
     void printBytes() {
         char * buffer = this->toBytes();
         for(int j = 0; buffer[j] != 0; j++)
-            printf("%02X ", buffer[j]);
+            printf("%02hhX ", buffer[j]);
         printf("\n");
     }
 };

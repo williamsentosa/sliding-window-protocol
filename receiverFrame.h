@@ -12,7 +12,7 @@ private:
     bool error;
 
 public:
-    ReceiverFrame(int frameNumber) {
+    ReceiverFrame(char frameNumber) {
         this->frameNumber = frameNumber;
         this->error = false;
     }
@@ -25,15 +25,20 @@ public:
         ////SETTING FRAME NUMBER
         this->setFrameNumber(frame[1]);
 
+        /**
+         * Supaya gak core dumped aku ganti i nya, tadi i < 1+1+4
+         * Jadi i < 1+1+2
+         */
+
         if (!this->error) {
             char checksum[5];
-            for (int i = 1 + 1 /* after ETX */; i < 1 + 1 + 5; i++) {
+            for (int i = 1 + 1 /* after ETX */; i < 1 + 1 + 2; i++) {
                 checksum[i - 2] = frame[i];
             }
 
             char * framex = this->toBytes();
             char trueChecksum[5];
-            for (int i = 1 + 1 /* after ETX */; i < 1 + 1 + 5; i++) {
+            for (int i = 1 + 1 /* after ETX */; i < 1 + 1 + 2; i++) {
                 trueChecksum[i - 2] = framex[i];
             }
 
@@ -49,14 +54,19 @@ public:
     char getAck() { return this->ack; }
     void setAck(char newAck) { this->ack = newAck; }
 
-    char getFrameNumber() { return this->frameNumber; }
+    char getFrameNumber() { return this->frameNumber + '0'; }
     void setFrameNumber(char newNumber) { this->frameNumber = newNumber; }
 
     char * toBytes() {
         char * o = new char[1 + 1 + 4];
         o[0] = this->ack;
         o[1] = this->frameNumber;
-        sprintf(o, "%s%x", o, calc_crc16(o));
+
+        unsigned short c = calc_crc16(o, strlen(o));
+        char * a = new char[2];
+        a[0] = c & 0xff;
+        a[1] = (c >> 8) & 0xff;
+        sprintf(o, "%s%s", o, a);
         return o;
     }
 
@@ -65,7 +75,7 @@ public:
     void printBytes() {
         char * buffer = this->toBytes();
         for(int j = 0; buffer[j] != 0; j++)
-            printf("%02X ", buffer[j]);
+            printf("%02hhX ", buffer[j]);
     }
 
     bool isError() { return this->error; }

@@ -21,7 +21,7 @@ using namespace std;
 struct CompareFrame {
     bool operator()(TransmitterFrame & frame1, TransmitterFrame & frame2) {
         // return "true" if "p1" is ordered before "p2", for example:
-        return frame1.getFrameNumber() < frame2.getFrameNumber();
+        return frame1.getFrameNumber() > frame2.getFrameNumber();
     }
 };
 
@@ -34,28 +34,39 @@ socklen_t addr_size, client_addr_size;
 
 
 void sendNAK(int frameNum, int udpSocket) {
-	ReceiverFrame ack(frameNum);
+	char temp = char(frameNum);
+	ReceiverFrame ack(temp);
 	ack.setAck(NAK);
+	ack.printBytes();
+	cout << endl;
 	sendto(udpSocket,ack.toBytes(),ack.getBytesLength(),0,(struct sockaddr *)&serverStorage,addr_size);
 }
 
 void sendACK(int frameNum, int udpSocket) {
-	ReceiverFrame ack(frameNum);
+	char temp = char(frameNum);
+	ReceiverFrame ack(temp);
 	ack.setAck(ACK);
+	ack.printBytes();
+	cout << endl;
 	sendto(udpSocket,ack.toBytes(),ack.getBytesLength(),0,(struct sockaddr *)&serverStorage,addr_size);
 }
 
 
 void processMsg(int udpSocket) {
 	TransmitterFrame frame;
-	int num = 0;
-	while(!buffer.empty()) {
-		if(buffer.top().getFrameNumber() == num) {
-			frame = buffer.top();	// blm ada operator= 
-			buffer.pop();
-			num = (num+1) % (WINDOW_SIZE-1);
-			cout << frame.getData() << endl;
-		} 
+	int num = 1;
+	while(true) {
+		if(!buffer.empty()) {
+			//cout << "TOP " << buffer.top().getFrameNumber() << " v " << num << endl;
+			if(buffer.top().getFrameNumber() == num) {
+				//printf("Test\n");
+				frame = buffer.top();	// blm ada operator= 
+				buffer.pop();
+				if(num > BUFFER_SIZE) num = 1;
+				else num++;
+				printf("%s\n", frame.getData());
+			} 		
+		}
 	}
 }
 
@@ -67,7 +78,7 @@ bool isAllTrue(bool approved[], int length) {
 }
 
 void setAllFalse(bool approved[], int length) {
-	for(int i=0; i<WINDOW_SIZE; i++) {
+	for(int i=0; i<length; i++) {
 		approved[i] = false;
 	}
 }
@@ -75,7 +86,7 @@ void setAllFalse(bool approved[], int length) {
 // Menerima message
 void rcvMsg(int udpSocket) {
 	char msg[100];
-	bool approved[WINDOW_SIZE];
+	bool approved[WINDOW_SIZE+1];
 	setAllFalse(approved, WINDOW_SIZE);
 	while (true) {
 		recvfrom(udpSocket,msg,100,0,(struct sockaddr *)&serverStorage, &addr_size);
@@ -84,11 +95,16 @@ void rcvMsg(int udpSocket) {
 			sendNAK(frame.getFrameNumber(), udpSocket);
 		} else {
 			sendACK(frame.getFrameNumber(), udpSocket);
+			//cout << frame.getData() <<endl;
 			if(!approved[frame.getFrameNumber()]) {
+				//cout << frame.getData() <<endl;
 				buffer.push(frame);
+				//printf("Frame Number : ");
+				//printf("%d\n", buffer.top().getFrameNumber()); 
+				//cout << buffer.size() << endl;
 				approved[frame.getFrameNumber()] = true;
-				if(isAllTrue(approved, WINDOW_SIZE)) {
-					setAllFalse(approved, WINDOW_SIZE);
+				if(isAllTrue(approved, WINDOW_SIZE+1)) {
+					setAllFalse(approved, WINDOW_SIZE+1);
 				}
 			}
 		}
@@ -124,6 +140,5 @@ int main (int argc, char* argv[]) {
 		th1.join();
 		th2.join();
 	}
-	
 	return 0;
 }

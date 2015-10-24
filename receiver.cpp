@@ -37,8 +37,9 @@ void sendNAK(int frameNum, int udpSocket) {
 	char temp = char(frameNum);
 	ReceiverFrame ack(temp);
 	ack.setAck(NAK);
-	ack.printBytes();
-	cout << endl;
+	printf("NAK %d\n", frameNum);
+	//ack.printBytes();
+	//cout << endl;
 	sendto(udpSocket,ack.toBytes(),ack.getBytesLength(),0,(struct sockaddr *)&serverStorage,addr_size);
 }
 
@@ -46,8 +47,9 @@ void sendACK(int frameNum, int udpSocket) {
 	char temp = char(frameNum);
 	ReceiverFrame ack(temp);
 	ack.setAck(ACK);
-	ack.printBytes();
-	cout << endl;
+	printf("ACK %d\n", frameNum);
+	//ack.printBytes();
+	//cout << endl;
 	sendto(udpSocket,ack.toBytes(),ack.getBytesLength(),0,(struct sockaddr *)&serverStorage,addr_size);
 }
 
@@ -91,6 +93,7 @@ void rcvMsg(int udpSocket) {
 	while (true) {
 		recvfrom(udpSocket,msg,100,0,(struct sockaddr *)&serverStorage, &addr_size);
 		TransmitterFrame frame(msg);
+		printf("Frame : "); frame.printBytes();
 		if(frame.isError()) {
 			sendNAK(frame.getFrameNumber(), udpSocket);
 		} else {

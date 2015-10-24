@@ -32,18 +32,16 @@ public:
 
         if (!this->error) {
             char checksum[5];
-            for (int i = 1 + 1 /* after ETX */; i < 1 + 1 + 2; i++) {
+            for (int i = 1 + 1 /* after ETX */; i < 1 + 1 + 4; i++) {
                 checksum[i - 2] = frame[i];
             }
-
             char * framex = this->toBytes();
             char trueChecksum[5];
-            for (int i = 1 + 1 /* after ETX */; i < 1 + 1 + 2; i++) {
+            for (int i = 1 + 1 /* after ETX */; i < 1 + 1 + 4; i++) {
                 trueChecksum[i - 2] = framex[i];
             }
-
             //check equality    
-            for (int i = 0; i < 4 && !this->error; i++) {
+            for (int i = 0; i < 6 && !this->error; i++) {
                 if (checksum[i] != trueChecksum[i]) {
                     this->error = true;
                 }
@@ -54,7 +52,7 @@ public:
     char getAck() { return this->ack; }
     void setAck(char newAck) { this->ack = newAck; }
 
-    char getFrameNumber() { return this->frameNumber + '0'; }
+    char getFrameNumber() { return this->frameNumber; }
     void setFrameNumber(char newNumber) { this->frameNumber = newNumber; }
 
     char * toBytes() {

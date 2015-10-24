@@ -13,6 +13,8 @@
 #include "transmitterFrame.h"
 #include "receiverFrame.h"
 #include <vector>
+#include <time.h>
+#include <ctime>
 
 using namespace std;
 
@@ -26,21 +28,23 @@ int neffContents = 0, idxContents = 0, clientSocket;
 struct sockaddr_in serverAddr;
 struct sockaddr_storage serverStorage;
 socklen_t addr_size;
+int timeFrame[WINDOW_SIZE];
 
-// Menerima sign yang dikirim ke receiver, apakah XON atau XOFF
+// Menerima sign yang dikirim ke receiver, apakah ACK atau NAK
 void recvSign(int clientSocket) {
   while(1) {
-    recvfrom(clientSocket,sign,5,0,NULL, NULL);
+    recvfrom(clientSocket,sign,10,0,NULL, NULL);
     ReceiverFrame frame(sign);
-
     if(frame.isError()) {
-    	cout << "ERROR " << frame.getFrameNumber() << endl;
+    	cout << "ERROR " << int(frame.getFrameNumber()) << endl;
     } else if(frame.getAck() == ACK) {
     	window.erase(buffer.begin()+ (frame.getFrameNumber() - '0'));
-     	cout << "ACK " << frame.getFrameNumber() << endl;
+     	cout << "ACK " << int(frame.getFrameNumber()) << endl;
     } else if (frame.getAck() == NAK) {
-    	cout << "NAK " << frame.getFrameNumber() << endl;
-    }
+    	cout << "NAK " << int(frame.getFrameNumber()) << endl;
+    } 
+    // timeout
+    printf("Checkpoint 1\n");
   }
 }
 
@@ -114,6 +118,7 @@ void sendSingleFrame(int clientSocket, TransmitterFrame * frame) {
 }
 
 void sendMultipleFrame() {
+
 	for (int i = 0; i < WINDOW_SIZE; i++) {
 		buffer[0]->printBytes();
 		window.push_back(buffer[0]);
@@ -124,9 +129,25 @@ void sendMultipleFrame() {
 	while (window.size() > 0) {
 		for (int i = 0; i < window.size(); i++) {
 			sendSingleFrame(clientSocket, window[i]);
+			//timeFrame[i+1] = time();
 		}
 		sleep(ACK_TIMEOUT);
 	}
+
+}
+
+
+void checkTimeout() {
+/*
+	while (true) {
+		for (int i = 1; i <= WINDOW_SIZE; i++) {
+			now = time();
+			if (((timeFrame[i] - now)/double(CLOCKS_PER_SEC)*1000) > 0) {
+
+			}
+		}
+	}
+*/
 }
 
 int main(int argc, char* argv[]) {

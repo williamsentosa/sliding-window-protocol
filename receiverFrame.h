@@ -25,13 +25,8 @@ public:
         ////SETTING FRAME NUMBER
         this->setFrameNumber(frame[1]);
 
-        /**
-         * Supaya gak core dumped aku ganti i nya, tadi i < 1+1+4
-         * Jadi i < 1+1+2
-         */
-
         if (!this->error) {
-            char checksum[5];
+            char checksum[6];
             for (int i = 1 + 1 /* after ETX */; i < 1 + 1 + 4; i++) {
                 checksum[i - 2] = frame[i];
             }

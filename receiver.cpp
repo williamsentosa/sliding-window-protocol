@@ -18,14 +18,26 @@
 
 using namespace std;
 
-struct CompareFrame {
-    bool operator()(TransmitterFrame & frame1, TransmitterFrame & frame2) {
-        // return "true" if "p1" is ordered before "p2", for example:
-        return frame1.getFrameNumber() > frame2.getFrameNumber();
-    }
-};
+vector<TransmitterFrame> buffer;
 
-priority_queue<TransmitterFrame, vector<TransmitterFrame>, CompareFrame > buffer;
+void delBuffer(vector<TransmitterFrame> &buffer, int frameNum, TransmitterFrame& result) {
+	for(vector<TransmitterFrame>::iterator i=buffer.begin(); i<buffer.end(); i++) {
+		if(i->getFrameNumber() == frameNum) {
+			result = *i;
+			buffer.erase(i);
+			break;
+		}
+	}
+}
+
+bool isElement(vector<TransmitterFrame> buffer, int frameNum) {
+	for(vector<TransmitterFrame>::iterator i=buffer.begin(); i<buffer.end(); i++) {
+		if(i->getFrameNumber() == frameNum) {
+			return true;
+		}
+	}	
+	return false;
+}
 
 // Kamus Global
 struct sockaddr_in serverAddr, clientAddr;
@@ -60,10 +72,9 @@ void processMsg(int udpSocket) {
 	while(true) {
 		if(!buffer.empty()) {
 			//cout << "TOP " << buffer.top().getFrameNumber() << " v " << num << endl;
-			if(buffer.top().getFrameNumber() == num) {
+			if(isElement(buffer, num)) {
 				//printf("Test\n");
-				frame = buffer.top();	// blm ada operator= 
-				buffer.pop();
+				delBuffer(buffer, num, frame);
 				if(num > BUFFER_SIZE) num = 1;
 				else num++;
 				printf("%s\n", frame.getData());
@@ -91,17 +102,17 @@ void rcvMsg(int udpSocket) {
 	bool approved[WINDOW_SIZE+1];
 	setAllFalse(approved, WINDOW_SIZE);
 	while (true) {
-		recvfrom(udpSocket,msg,100,0,(struct sockaddr *)&serverStorage, &addr_size);
+		recvfrom(udpSocket,msg,300,0,(struct sockaddr *)&serverStorage, &addr_size);
+		for(int i=0; i<strlen(msg); i++) printf("%02hhX ", msg[i]);
+		printf("\n");
 		TransmitterFrame frame(msg);
-		printf("Frame : "); frame.printBytes();
-		if(frame.isError()) {
-			sendNAK(frame.getFrameNumber(), udpSocket);
-		} else {
+		//printf("Frame : "); frame.printBytes();
+		if(!frame.isError()) {
 			sendACK(frame.getFrameNumber(), udpSocket);
 			//cout << frame.getData() <<endl;
 			if(!approved[frame.getFrameNumber()]) {
 				//cout << frame.getData() <<endl;
-				buffer.push(frame);
+				buffer.push_back(frame);
 				//printf("Frame Number : ");
 				//printf("%d\n", buffer.top().getFrameNumber()); 
 				//cout << buffer.size() << endl;
@@ -110,7 +121,10 @@ void rcvMsg(int udpSocket) {
 					setAllFalse(approved, WINDOW_SIZE+1);
 				}
 			}
+		} else {
+			sendNAK(frame.getFrameNumber(), udpSocket);
 		}
+		
 	}
 } 
 
